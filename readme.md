@@ -7,7 +7,7 @@ FLAC 和 DSF 音乐 tag 清洗工具。
 
 ### 使用方法
 
-修改`SRC_DIR`和`TARGET_DIR`，运行脚本进行音乐Tag清洗
+修改`confiy.py`中`SRC_DIR`和`TARGET_DIR`，运行`main.py`脚本进行音乐Tag清洗
 
 ![示例](example.png)
 
@@ -19,5 +19,5 @@ FLAC 和 DSF 音乐 tag 清洗工具。
 
 ### 注意事项  
 
- 1. 如果不想清空源目录，请将`IS_DELETE_SRC_EMPTY_DIR`设置为False
+ 1. 如果不想清空源目录，请将`IS_DELETE_SRC`设置为False
  2. 如果清洗日文歌曲，请将`IS_CC_CONVERT`设置为False

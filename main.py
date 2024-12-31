@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+import click
+# !/usr/bin/env python3
 import os
 from typing import List
 from cleaner.flac_cleaner import FlacCleaner
@@ -6,12 +7,12 @@ from cleaner.dsf_cleaner import DsfCleaner
 from config import *
 
 
-def get_all_music_file() -> List[str]:
+def get_all_music_file(dir) -> List[str]:
     """
     遍历SRC_DIR目录下全部flac文件，并返回文件列表
     """
     music_file_list = []
-    for root, dirs, files in os.walk(SRC_DIR):
+    for root, dirs, files in os.walk(dir):
         for file in files:
             extension = os.path.splitext(file)[1]
             if extension in SUPPORT_MUSIC_TYPE:
@@ -19,7 +20,7 @@ def get_all_music_file() -> List[str]:
     return music_file_list
 
 
-def delete_empty_dir(folder):
+def delete_empty_dir(folder, is_keep_cover):
     """
     获取目录下所有文件，删除后缀在DELETE_FILE_SUFFIX_LIST中的文件，然后删除空的目录
     """
@@ -31,7 +32,7 @@ def delete_empty_dir(folder):
             # 如果file的后缀名在SUFFIX_LIST中，则将文件加入待删除列表
             if os.path.splitext(file)[1].lower() in DELETE_FILE_SUFFIX_LIST:
                 # 判断是否是封面文件， 如果不是封面则添加到删除列表中
-                if IS_KEEP_SRC_DIR_COVER:
+                if is_keep_cover:
                     if "cover" not in os.path.basename(file).split(".")[0].lower():
                         delete_file_list.append(os.path.join(root, file))
                 else:
@@ -53,17 +54,29 @@ def delete_empty_dir(folder):
             os.rmdir(dir)
 
 
-if __name__ == '__main__':
-    music_file_list = get_all_music_file()
+@click.command()
+@click.option('-s', '--src_dir', default=SRC_DIR, help='源目录')
+@click.option('-t', '--target_dir', default=TARGET_DIR, help='目标目录')
+@click.option('-c', '--is_cc_convert', default=IS_CC_CONVERT,
+              help="是否需要opencc转换")
+@click.option('-d', '--is_delete_src', default=IS_DELETE_SRC, help='是否清空源目录空文件夹')
+@click.option('-m', '--is_move_file', default=IS_MOVE_FILE, help='是否移动文件到目标目录')
+@click.option('-k', '--is_keep_cover', default=IS_KEEP_COVER, help='是否保留封面，根据文件名是"cover"判断封面')
+def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep_cover):
+    """
+    音乐 tag 清洗工具。 对音乐文件进行批量操作前，务必复制小部分音乐文件进行小范围测试！！！
+    修改confiy.py中SRC_DIR和TARGET_DIR，运行main.py脚本进行音乐Tag清洗
+    """
+    music_file_list = get_all_music_file(src_dir)
     # 根据专辑名称存放歌曲
     album_music_cleaner_dict = {}
     for music_file in music_file_list:
         print("-" * 80)
         print("开始清洗文件: {}".format(music_file))
         if music_file.endswith(".flac"):
-            music_cleaner = FlacCleaner(music_file)
+            music_cleaner = FlacCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
         elif music_file.endswith(".dsf"):
-            music_cleaner = DsfCleaner(music_file)
+            music_cleaner = DsfCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
         music_cleaner.clean_tags()
 
         album_music_cleaner_dict.setdefault(music_cleaner.album, []).append(music_cleaner)
@@ -80,36 +93,40 @@ if __name__ == '__main__':
         # 清空单张碟的碟号
         if is_album_single_disc:
             for music_cleaner in music_cleaner_list:
-                print("开始清空单碟文件碟号：{}".format(music_cleaner.filename))
+                print("开始清空单碟文件碟号：{}".format(music_cleaner.music_file))
                 music_cleaner.disc_number = ""
 
     print("Tag清洗完成，开始文件处理...")
     print("=" * 100)
 
-    music_file_list = get_all_music_file()
+    music_file_list = get_all_music_file(src_dir)
     # 排除tag信息不全的文件
     music_file_list = [music_file for music_file in music_file_list if music_file not in lack_tag_file_list]
 
     for music_file in music_file_list:
         print("开始处理文件: {}".format(music_file))
         if music_file.endswith(".flac"):
-            music_cleaner = FlacCleaner(music_file)
+            music_cleaner = FlacCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
         elif music_file.endswith(".dsf"):
             music_cleaner = DsfCleaner(music_file)
         new_file = music_cleaner.rename_file()
 
-        if IS_MOVE_FILE_TO_TARGET_DIR and new_file is not None:
+        if is_move_file and new_file is not None:
             music_cleaner.move_file(new_file)
 
     # 清空空目录
-    if IS_DELETE_SRC_EMPTY_DIR:
-        delete_empty_dir(SRC_DIR)
+    if is_delete_src:
+        delete_empty_dir(src_dir, is_keep_cover)
 
     print("=" * 100)
     if len(lack_tag_file_list) > 0:
-        print("{} 清洗完成， 共有 {} 个文件失败！！！".format(SRC_DIR, len(lack_tag_file_list)))
+        print("{} 清洗完成， 共有 {} 个文件失败！！！".format(src_dir, len(lack_tag_file_list)))
         print("失败文件列表如下： ")
         for file in lack_tag_file_list:
             print(file)
     else:
-        print("{} 清洗完成".format(SRC_DIR))
+        print("{} 清洗完成".format(src_dir))
+
+
+if __name__ == '__main__':
+    run()

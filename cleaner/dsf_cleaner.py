@@ -5,9 +5,9 @@ from config import POP_KEY_LIST
 
 
 class DsfCleaner(MusicCleaner):
-    def __init__(self, filename):
-        super().__init__(filename)
-        self.music = DSF(filename)
+    def __init__(self, music_file, target_dir, is_cc_convert, is_delete_src, is_move_file):
+        super().__init__(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
+        self.music = DSF(music_file)
 
     @property
     def title(self):

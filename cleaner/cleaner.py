@@ -6,8 +6,12 @@ from config import *
 
 
 class MusicCleaner(ABC):
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, music_file, target_dir, is_cc_convert, is_delete_src, is_move_file):
+        self.music_file = music_file
+        self.target_dir = target_dir
+        self.is_cc_convert = is_cc_convert
+        self.is_delete_src = is_delete_src
+        self.is_move_file = is_move_file
         self.music: FileType = None
 
     # 标题
@@ -125,7 +129,7 @@ class MusicCleaner(ABC):
         self.disc_number = disc_number
 
         # 根据IS_TRANSLATE配置，进行简繁转换
-        if IS_CC_CONVERT:
+        if self.is_cc_convert:
             self.title = cc.convert(self.title)
             self.artist = cc.convert(self.artist)
             self.album = cc.convert(self.album)
@@ -154,7 +158,7 @@ class MusicCleaner(ABC):
             return None
 
         # 文件后缀名
-        file_suffix = os.path.splitext(self.filename)[1]
+        file_suffix = os.path.splitext(self.music_file)[1]
 
         # 如果tag信息中包含则discnumber则需要将discnumber加入到文件名中
         if self.disc_number != "":
@@ -167,8 +171,8 @@ class MusicCleaner(ABC):
             if k != "." and k in new_file_name:  # 文件名中不需要过滤.
                 new_file_name = new_file_name.replace(k, v)
 
-        new_file = os.path.join(os.path.dirname(self.filename), new_file_name)
-        os.rename(self.filename, new_file)
+        new_file = os.path.join(os.path.dirname(self.music_file), new_file_name)
+        os.rename(self.music_file, new_file)
         return new_file
 
     # 移动文件到目标目录
@@ -192,7 +196,7 @@ class MusicCleaner(ABC):
                 album_artist = album_artist.replace(k, v)
 
         # 判断专辑艺术家，专辑目录是否存在，不存在则创建
-        artist_dir = os.path.join(TARGET_DIR, album_artist)
+        artist_dir = os.path.join(self.target_dir, album_artist)
         if not os.path.exists(artist_dir):
             os.mkdir(artist_dir)
 
