@@ -1,5 +1,5 @@
-import click
 # !/usr/bin/env python3
+import click
 import os
 from typing import List
 from cleaner.flac_cleaner import FlacCleaner
