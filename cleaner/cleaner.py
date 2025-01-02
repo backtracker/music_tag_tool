@@ -94,7 +94,7 @@ class MusicCleaner(ABC):
     # 清洗Tag
     def clean_tags(self):
         print("开始清洗音乐文件: {}".format(self.music.filename))
-        print("{} tag信息: {}".format(os.path.basename(self.music.filename), self.music))
+        print("{} tag信息: {}".format(os.path.basename(self.music.filename), str(self.music)[:1000]))
 
         # 处理Tag字段中中前后空格
         self.artist = self.artist.strip()
@@ -137,7 +137,7 @@ class MusicCleaner(ABC):
 
         # 清理不必要的key
         self.pop_keys()
-        print("{} tag 清洗完成：{}".format(os.path.basename(self.music.filename), self.music))
+        print("{} tag 清洗完成：{}".format(os.path.basename(self.music.filename), str(self.music)[:1000]))
 
     # 清空多余key
     @abstractmethod

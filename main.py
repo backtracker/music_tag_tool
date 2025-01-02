@@ -1,9 +1,10 @@
-# !/usr/bin/env python3
+#!/usr/bin/env /usr/bin/python3
 import click
 import os
 from typing import List
 from cleaner.flac_cleaner import FlacCleaner
 from cleaner.dsf_cleaner import DsfCleaner
+from cleaner.mp3_cleaner import Mp3Cleaner
 from config import *
 
 
@@ -77,6 +78,8 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
             music_cleaner = FlacCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
         elif music_file.endswith(".dsf"):
             music_cleaner = DsfCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
+        elif music_file.endswith(".mp3"):
+            music_cleaner = Mp3Cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
         music_cleaner.clean_tags()
 
         album_music_cleaner_dict.setdefault(music_cleaner.album, []).append(music_cleaner)
@@ -108,7 +111,9 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
         if music_file.endswith(".flac"):
             music_cleaner = FlacCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
         elif music_file.endswith(".dsf"):
-            music_cleaner = DsfCleaner(music_file)
+            music_cleaner = DsfCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
+        elif music_file.endswith(".mp3"):
+            music_cleaner = Mp3Cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
         new_file = music_cleaner.rename_file()
 
         if is_move_file and new_file is not None:
