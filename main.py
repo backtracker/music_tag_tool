@@ -1,11 +1,38 @@
 #!/usr/bin/env /usr/bin/python3
 import click
 import os
+import dashscope
 from typing import List
+from http import HTTPStatus
 from cleaner.flac_cleaner import FlacCleaner
 from cleaner.dsf_cleaner import DsfCleaner
 from cleaner.mp3_cleaner import Mp3Cleaner
+from cleaner.cleaner import MusicCleaner
 from config import *
+
+dashscope.api_key = DASHSCOPE_API_KEY
+
+
+def get_album_genre(album_info):
+    """
+    album_info 包括歌手 专辑名
+    """
+    response = dashscope.Generation.call(
+        model=dashscope.Generation.Models.qwen_plus,
+        prompt=f"{MUSIC_GENRE_PROMPT}下面给出专辑信息:{album_info}"
+    )
+    print("开始请求 {} 音乐分类...".format(album_info))
+    if response.status_code == HTTPStatus.OK:
+        print(response.output)  # The output text
+        print(response.usage)  # The usage information
+        album_genre = response.output["text"]
+        print(f"{album_info} 音乐风格为：{album_genre}")
+        return album_genre if album_genre != "未知" else None
+    else:
+        print(response.code)  # The error code.
+        print(response.message)  # The error message.
+        print(f"{album_info} 未找到音乐风格信息！！！")
+        return None
 
 
 def get_all_music_file(dir) -> List[str]:
@@ -62,10 +89,13 @@ def delete_empty_dir(folder, is_keep_cover):
               help="是否需要opencc转换")
 @click.option('-d', '--is_delete_src', default=IS_DELETE_SRC, help='是否清空源目录空文件夹')
 @click.option('-m', '--is_move_file', default=IS_MOVE_FILE, help='是否移动文件到目标目录')
-@click.option('-k', '--is_keep_cover', default=IS_KEEP_COVER, help='是否保留封面，根据文件名是"cover"判断封面')
-def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep_cover):
+@click.option('-k', '--is_keep_cover', default=IS_KEEP_COVER, help='是否保留封面，根据文件名包含"cover"判断封面')
+@click.option('-g', '--is_get_genre', default=IS_GET_GENRE,
+              help='是否根据通译千问大模型获取音乐风格。使用前请在config.py中配置DASHSCOPE_API_KEY')
+def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep_cover, is_get_genre):
     """
-    音乐 tag 清洗工具。 对音乐文件进行批量操作前，务必复制小部分音乐文件进行小范围测试！！！
+    FLAC 、DSF、MP3 音乐 tag 清洗工具。
+    对音乐文件进行批量操作前，务必复制小部分音乐文件进行小范围测试！！！
     修改confiy.py中SRC_DIR和TARGET_DIR，运行main.py脚本进行音乐Tag清洗
     """
     music_file_list = get_all_music_file(src_dir)
@@ -83,7 +113,7 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
         music_cleaner.clean_tags()
 
         album_music_cleaner_dict.setdefault(music_cleaner.album, []).append(music_cleaner)
-
+    print("-" * 80)
     # 开始处理碟号，如果专辑是单张碟，将整张专辑碟号字段清空
     for album, music_cleaner_list in album_music_cleaner_dict.items():
         # 专辑是否是单张碟
@@ -98,6 +128,18 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
             for music_cleaner in music_cleaner_list:
                 print("开始清空单碟文件碟号：{}".format(music_cleaner.music_file))
                 music_cleaner.disc_number = ""
+
+    # 处理专辑音乐风格
+    if is_get_genre:
+        print("-"*80)
+        for album, music_cleaner_list in album_music_cleaner_dict.items():
+            mc: MusicCleaner = music_cleaner_list[0]
+            album_info = f"{mc.album_artist} {mc.album}"
+            genre = get_album_genre(album_info)
+            if genre is not None:
+
+                for music_cleaner in music_cleaner_list:
+                    music_cleaner.genre = genre
 
     print("Tag清洗完成，开始文件处理...")
     print("=" * 100)

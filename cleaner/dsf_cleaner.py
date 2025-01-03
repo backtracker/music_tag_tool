@@ -1,6 +1,6 @@
 from cleaner.cleaner import MusicCleaner
 from mutagen.dsf import DSF
-from mutagen.id3 import TIT2, TALB, TPE1, TPE2, TRCK, TDRC, TPOS
+from mutagen.id3 import TIT2, TALB, TPE1, TPE2, TRCK, TDRC, TPOS, TCON
 from config import POP_KEY_LIST
 
 
@@ -71,6 +71,16 @@ class DsfCleaner(MusicCleaner):
     def disc_number(self, new_value):
         self.music["TPOS"] = TPOS(encoding=3, text=[new_value])
         self.music.save()
+
+    @property
+    def genre(self):
+        return str(self.music["TCON"]) if "TCON" in self.music.keys() else ""
+
+    @genre.setter
+    def genre(self, new_value):
+        self.music["TCON"] = TCON(encoding=3, text=[new_value])
+        self.music.save()
+
 
     def clean_tags(self):
         super().clean_tags()

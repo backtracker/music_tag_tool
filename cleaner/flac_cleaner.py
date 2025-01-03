@@ -79,6 +79,17 @@ class FlacCleaner(MusicCleaner):
         self.music["discnumber"] = new_value
         self.music.save()
 
+    @property
+    def genre(self):
+        key = "genre"
+        return self.music[key][0] if key in self.music.keys() else ""
+
+    @genre.setter
+    def genre(self, new_value):
+        self.music["genre"] = new_value
+        self.music.save()
+
+
     def clean_tags(self):
         super().clean_tags()
 

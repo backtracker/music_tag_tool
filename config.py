@@ -13,7 +13,8 @@ cc = OpenCC('t2s')
 IS_CC_CONVERT = True  # 是否需要opencc转换
 IS_DELETE_SRC = True  # 是否清空源目录空文件夹
 IS_KEEP_COVER = True  # 是否保留封面，根据文件名是"cover"判断封面
-IS_MOVE_FILE = True  # 是否移动文件到目标目录
+IS_MOVE_FILE = True   # 是否移动文件到目标目录
+IS_GET_GENRE = False  # 是否获取音乐风格
 
 # 支持清洗的音乐类型
 SUPPORT_MUSIC_TYPE = ['.flac', '.dsf', '.mp3']
@@ -33,9 +34,21 @@ POP_KEY_LIST = {
              "label",
              "releasestatus", "id", "comment", "encoder", "performer", 'discid', 'ctdbtrackconfidence',
              'cdtoc', "album artist", "notes", 'gnid'],
-    "DSF": ['TSO2', 'TSOP', 'TSRC', 'TMED', 'text'],
-    "MP3": ['TSO2', 'TSOP', 'TSRC', 'TMED', 'text']
+    "DSF": ['TSO2', 'TSOP', 'TSRC', 'TMED', 'COMM'],
+    "MP3": ['TSO2', 'TSOP', 'TSRC', 'TMED', 'COMM']
 }
+
+# 阿里云百炼API KEY。请在下面地址获取API KEY
+# https://bailian.console.aliyun.com/?apiKey=1#/api-key
+DASHSCOPE_API_KEY = ""
+
+
+# 音乐风格的prompt
+MUSIC_GENRE_PROMPT = ("请说出音乐专辑的音乐风格（musicgenre），"
+                      "风格请从Pop,Mandopop,K-Pop,J-Pop,Cantopop,Europop,Folk，Folk-Pop,World,Soundtrack,Anime,"
+                      "Disco,PianoBallad,Blues,Concert,Live,HeavyMetal,Country,Classical,Indie,Instrumental,Rock,Punk,"
+                      "Jazz,NewAge,Dance,Electronic,HipHop,Musical,Reggae,Alternative,Holiday,Remix 这些风格中选择。"
+                      "请直接给出风格信息，不要缀述。如果有多个风格请用;分隔。如果没有匹配风格请说未知。")
 
 # tag信息缺失文件列表
 lack_tag_file_list = []

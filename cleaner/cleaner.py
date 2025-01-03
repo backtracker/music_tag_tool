@@ -91,6 +91,16 @@ class MusicCleaner(ABC):
     def disc_number(self, value):
         pass
 
+    @property
+    @abstractmethod
+    def genre(self):
+        pass
+
+    @genre.setter
+    @abstractmethod
+    def genre(self, value):
+        pass
+
     # 清洗Tag
     def clean_tags(self):
         print("开始清洗音乐文件: {}".format(self.music.filename))
