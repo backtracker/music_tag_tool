@@ -187,7 +187,6 @@ class MusicCleaner(ABC):
 
     # 移动文件到目标目录
     def move_file(self, file):
-        print(file)
         """
         移动音乐文件到目标目录
         1. 处理albumartist和album目录中的特殊字符,并将英文的点替换为下划线

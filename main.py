@@ -1,38 +1,50 @@
-#!/usr/bin/env /usr/bin/python3
+#!/usr/bin/env /usr/local/bin/python3.10
 import click
 import os
-import dashscope
+from openai import OpenAI
 from typing import List
-from http import HTTPStatus
+from typing import Optional
+from collections import OrderedDict
+from config import *
 from cleaner.flac_cleaner import FlacCleaner
 from cleaner.dsf_cleaner import DsfCleaner
 from cleaner.mp3_cleaner import Mp3Cleaner
 from cleaner.cleaner import MusicCleaner
-from config import *
 
-dashscope.api_key = DASHSCOPE_API_KEY
+client = OpenAI(api_key=API_KEY, base_url="https://api.deepseek.com")
 
 
-def get_album_genre(album_info):
-    """
-    album_info 包括歌手 专辑名
-    """
-    response = dashscope.Generation.call(
-        model=dashscope.Generation.Models.qwen_plus,
-        prompt=f"{MUSIC_GENRE_PROMPT}下面给出专辑信息:{album_info}"
+def unique_artists(artists):
+    list_artist = artists.split('/')
+    # 使用OrderedDict保存顺序
+    ordered_dict = OrderedDict.fromkeys(list_artist)
+    new_artists = '/'.join(ordered_dict.keys())
+    return new_artists
+
+
+def create_music_cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file) -> MusicCleaner:
+    mc = None
+    if music_file.endswith(".flac"):
+        mc = FlacCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
+    elif music_file.endswith(".dsf"):
+        mc = DsfCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
+    elif music_file.endswith(".mp3"):
+        mc = Mp3Cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
+    return mc
+
+
+def call_ai(prompt) -> Optional[str]:
+    response = client.chat.completions.create(
+        model="deepseek-chat",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant"},
+            {"role": "user", "content": prompt},
+        ],
+        stream=False
     )
-    print("开始请求 {} 音乐分类...".format(album_info))
-    if response.status_code == HTTPStatus.OK:
-        print(response.output)  # The output text
-        print(response.usage)  # The usage information
-        album_genre = response.output["text"]
-        print(f"{album_info} 音乐风格为：{album_genre}")
-        return album_genre if album_genre != "未知" else None
-    else:
-        print(response.code)  # The error code.
-        print(response.message)  # The error message.
-        print(f"{album_info} 未找到音乐风格信息！！！")
-        return None
+    r = response.choices[0].message.content
+    print("AI返回：{}".format(r))
+    return r if r != "未知" else None
 
 
 def get_all_music_file(dir) -> List[str]:
@@ -91,28 +103,36 @@ def delete_empty_dir(folder, is_keep_cover):
 @click.option('-m', '--is_move_file', default=IS_MOVE_FILE, help='是否移动文件到目标目录')
 @click.option('-k', '--is_keep_cover', default=IS_KEEP_COVER, help='是否保留封面，根据文件名包含"cover"判断封面')
 @click.option('-g', '--is_get_genre', default=IS_GET_GENRE,
-              help='是否根据通译千问大模型获取音乐风格。使用前请在config.py中配置DASHSCOPE_API_KEY')
-def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep_cover, is_get_genre):
+              help='是否根据大模型获取音乐风格。使用前请在config.py中配置API_KEY')
+@click.option('-a', '--is_split_artist', default=IS_SPLIT_ARTIST,
+              help='是否根据大模型拆分多艺术家。使用前请在config.py中配置API_KEY')
+def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep_cover, is_get_genre, is_split_artist):
     """
     FLAC 、DSF、MP3 音乐 tag 清洗工具。
     对音乐文件进行批量操作前，务必复制小部分音乐文件进行小范围测试！！！
     修改confiy.py中SRC_DIR和TARGET_DIR，运行main.py脚本进行音乐Tag清洗
     """
+    print(f"开始清洗目录 {src_dir} ...")
+    print("=" * 100)
     music_file_list = get_all_music_file(src_dir)
-    # 根据专辑名称存放歌曲
-    album_music_cleaner_dict = {}
+
     for music_file in music_file_list:
         print("-" * 80)
         print("开始清洗文件: {}".format(music_file))
-        if music_file.endswith(".flac"):
-            music_cleaner = FlacCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-        elif music_file.endswith(".dsf"):
-            music_cleaner = DsfCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-        elif music_file.endswith(".mp3"):
-            music_cleaner = Mp3Cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-        music_cleaner.clean_tags()
+        music_cleaner = create_music_cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
+        music_cleaner.clean_tags()  # 清洗tag
 
+    print("音乐文件tag预清洗完成。")
+    print("=" * 100)
+
+    # 排除tag信息不全的文件
+    # 完整tag的文件列表
+    full_tag_music_list = [music_file for music_file in music_file_list if music_file not in lack_tag_file_list]
+    album_music_cleaner_dict = {}   # 根据专辑名称存放歌曲
+    for music_file in full_tag_music_list:
+        music_cleaner = create_music_cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
         album_music_cleaner_dict.setdefault(music_cleaner.album, []).append(music_cleaner)
+
     print("-" * 80)
     # 开始处理碟号，如果专辑是单张碟，将整张专辑碟号字段清空
     for album, music_cleaner_list in album_music_cleaner_dict.items():
@@ -131,31 +151,75 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
 
     # 处理专辑音乐风格
     if is_get_genre:
-        print("-"*80)
+        print("-" * 80)
+        print("开始获取音乐风格...")
         for album, music_cleaner_list in album_music_cleaner_dict.items():
+            print("-" * 80)
             mc: MusicCleaner = music_cleaner_list[0]
             album_info = f"{mc.album_artist} {mc.album}"
-            genre = get_album_genre(album_info)
-            if genre is not None:
+            print("开始获取专辑 {} 音乐风格...".format(album_info))
 
+            genre_prompt = f"{MUSIC_GENRE_PROMPT}{album_info}"
+            genre = call_ai(prompt=genre_prompt)
+
+            if genre is not None:
+                print(f"专辑 {album_info} 音乐风格:{genre}")
                 for music_cleaner in music_cleaner_list:
                     music_cleaner.genre = genre
+            else:
+                print(f"未查询到专辑 {album_info} 风格信息！！！")
+
+    # 处理歌手feat
+    if is_split_artist:
+        # 遍历专辑
+        print("-" * 80)
+        print("开始split artist...")
+        for album, music_cleaner_list in album_music_cleaner_dict.items():
+            # 遍历专辑里的歌曲
+            for music_cleaner in music_cleaner_list:
+                music_cleaner: MusicCleaner
+                title: str = music_cleaner.title
+                artist: str = music_cleaner.artist
+                # 优先处理歌曲标题中的feat artist
+                if "feat" in title.lower():
+                    print("-" * 80)
+                    print(f"开始处理歌曲 “{music_cleaner.title}” 中的feat歌手...")
+                    title_split_feat_prompt = f"{TITLE_SPLIT_FEAT_PROMPT} {music_cleaner.title}"
+                    split_artists = call_ai(title_split_feat_prompt)
+                    if split_artists is not None:
+                        # title 中feat 使用 专辑艺术家/feat艺术家
+                        new_artists = f"{music_cleaner.album_artist}/{split_artists}"
+                        new_artists = unique_artists(new_artists)  # 去重处理
+                        music_cleaner.artist = new_artists
+                        print(f"歌曲 “{music_cleaner.title}” 艺术家设置为：{new_artists}")
+                        # continue  # feat只处理一次，优先处理歌曲名称中信息
+                elif "feat" in artist.lower():
+                    print("-" * 80)
+                    print(f"开始处理歌曲 “{music_cleaner.title}” 艺术家 “{music_cleaner.artist}” 中的 feat歌手...")
+                    artist_split_feat_prompt = f"{ARTIST_SPLIT_FEAT_PROMPT} {music_cleaner.artist}"
+                    split_artists = call_ai(artist_split_feat_prompt)
+                    if split_artists is not None:
+                        # 艺术家字段中不添加专辑艺术家
+                        new_artists = unique_artists(split_artists)  # 去重处理
+                        music_cleaner.artist = new_artists
+                        print(f"歌曲 {music_cleaner.title} 艺术家设置为：{new_artists}")
+                elif "&" in artist.lower():
+                    print("-" * 80)
+                    print(f"开始处理歌曲 “{music_cleaner.title}” 艺术家 “{music_cleaner.artist}” 中包含&的歌手...")
+                    artist_split_feat_prompt = f"{ARTIST_SPLIT_AND_PROMPT} {music_cleaner.artist}"
+                    split_artists = call_ai(artist_split_feat_prompt)
+                    if split_artists is not None:
+                        # 艺术家字段中不添加专辑艺术家
+                        new_artists = unique_artists(split_artists)  # 去重处理
+                        music_cleaner.artist = new_artists
+                        print(f"歌曲 {music_cleaner.title} 艺术家设置为：{new_artists}")
 
     print("Tag清洗完成，开始文件处理...")
     print("=" * 100)
 
-    music_file_list = get_all_music_file(src_dir)
-    # 排除tag信息不全的文件
-    music_file_list = [music_file for music_file in music_file_list if music_file not in lack_tag_file_list]
-
-    for music_file in music_file_list:
+    for music_file in full_tag_music_list:
         print("开始处理文件: {}".format(music_file))
-        if music_file.endswith(".flac"):
-            music_cleaner = FlacCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-        elif music_file.endswith(".dsf"):
-            music_cleaner = DsfCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-        elif music_file.endswith(".mp3"):
-            music_cleaner = Mp3Cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
+        music_cleaner = create_music_cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
         new_file = music_cleaner.rename_file()
 
         if is_move_file and new_file is not None:
@@ -167,12 +231,12 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
 
     print("=" * 100)
     if len(lack_tag_file_list) > 0:
-        print("{} 清洗完成， 共有 {} 个文件失败！！！".format(src_dir, len(lack_tag_file_list)))
+        print("{} 清洗结束， 共有 {} 个文件失败！！！".format(src_dir, len(lack_tag_file_list)))
         print("失败文件列表如下： ")
         for file in lack_tag_file_list:
             print(file)
     else:
-        print("{} 清洗完成".format(src_dir))
+        print("{} 目录清洗完成".format(src_dir))
 
 
 if __name__ == '__main__':
