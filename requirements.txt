@@ -3,4 +3,4 @@ mutagen==1.47.0
 openai==1.59.6
 OpenCC==1.1.9
 # If there is a problem with OpenCC installation, install the following libraries
-#opencc-python-reimplemented 0.1.7
+#opencc-python-reimplemented==0.1.7

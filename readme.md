@@ -12,6 +12,8 @@ FLAC 、DSF、MP3 音乐 tag 清洗工具。
 
 ![示例](example.gif)
 
+![示例](example.png)
+
 ### 最佳实践
 1. 新建一个音乐清洗目录，包含 `待整理` 和 `已整理` 目录，分别配置在`confiy.py`中的`SRC_DIR` 和 `TARGET_DIR`
 2. 将需要清洗的音乐文件放入到 `待整理` 目录中
@@ -27,7 +29,7 @@ FLAC 、DSF、MP3 音乐 tag 清洗工具。
 2. 将音乐文件名和tag转成简体中文  
 3. 重命名文件名，改为 “编号. 歌曲名” 或者 “碟号—音轨号 歌曲名”  
 4. 支持flac、dsf、mp3格式 ，如需支持其他格式请自行添加`Cleaner`进行扩展
-5. 根据deepseek AI大模型获取专辑的音乐风格(music genre)
+5. 根据deepseek AI大模型获取专辑的音乐风格(music genre), 拆分feat歌手
 
 ### 注意事项  
 
