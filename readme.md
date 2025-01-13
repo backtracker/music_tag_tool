@@ -10,7 +10,7 @@ FLAC 、DSF、MP3 音乐 tag 清洗工具。
 修改`confiy.py`中`SRC_DIR`和`TARGET_DIR`，运行`main.py`脚本进行音乐Tag清洗
 
 
-![示例](example.png)
+![示例](example.gif)
 
 ### 最佳实践
 1. 新建一个音乐清洗目录，包含 `待整理` 和 `已整理` 目录，分别配置在`confiy.py`中的`SRC_DIR` 和 `TARGET_DIR`
