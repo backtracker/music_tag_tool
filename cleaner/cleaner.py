@@ -168,7 +168,7 @@ class MusicCleaner(ABC):
             return None
 
         # 文件后缀名
-        file_suffix = os.path.splitext(self.music_file)[1]
+        file_suffix = os.path.splitext(self.music_file)[1].lower()
 
         # 如果tag信息中包含则discnumber则需要将discnumber加入到文件名中
         if self.disc_number != "":

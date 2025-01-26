@@ -24,11 +24,11 @@ def unique_artists(artists):
 
 def create_music_cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file) -> MusicCleaner:
     mc = None
-    if music_file.endswith(".flac"):
+    if music_file.lower().endswith(".flac"):
         mc = FlacCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-    elif music_file.endswith(".dsf"):
+    elif music_file.lower().endswith(".dsf"):
         mc = DsfCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-    elif music_file.endswith(".mp3"):
+    elif music_file.lower().endswith(".mp3"):
         mc = Mp3Cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
     return mc
 
@@ -106,7 +106,7 @@ def get_all_music_file(dir) -> List[str]:
     for root, dirs, files in os.walk(dir):
         for file in files:
             extension = os.path.splitext(file)[1]
-            if extension in SUPPORT_MUSIC_TYPE:
+            if extension.lower() in SUPPORT_MUSIC_TYPE:
                 music_file_list.append(os.path.join(root, file))
     return music_file_list
 
