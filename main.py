@@ -9,9 +9,10 @@ from config import *
 from cleaner.flac_cleaner import FlacCleaner
 from cleaner.dsf_cleaner import DsfCleaner
 from cleaner.mp3_cleaner import Mp3Cleaner
+from cleaner.m4a_cleaner import M4aCleaner
 from cleaner.cleaner import MusicCleaner
 
-client = OpenAI(api_key=API_KEY, base_url="https://api.deepseek.com")
+client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
 
 
 def unique_artists(artists):
@@ -22,29 +23,39 @@ def unique_artists(artists):
     return new_artists
 
 
-def create_music_cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file) -> MusicCleaner:
-    mc = None
-    if music_file.lower().endswith(".flac"):
-        mc = FlacCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-    elif music_file.lower().endswith(".dsf"):
-        mc = DsfCleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-    elif music_file.lower().endswith(".mp3"):
-        mc = Mp3Cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-    return mc
+def create_music_cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file) -> Optional[MusicCleaner]:
+    # 定义文件扩展名到清理器类的映射
+    cleaner_mapping = {
+        ".flac": FlacCleaner,
+        ".dsf": DsfCleaner,
+        ".mp3": Mp3Cleaner,
+        ".m4a": M4aCleaner
+    }
+    # 获取文件扩展名
+    file_extension = os.path.splitext(music_file.lower())[1]
+    # 根据扩展名查找对应的清理器类
+    cleaner_class = cleaner_mapping.get(file_extension)
+    if cleaner_class:
+        return cleaner_class(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
+    return None
 
 
 def call_ai(prompt) -> Optional[str]:
-    response = client.chat.completions.create(
-        model="deepseek-chat",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant"},
-            {"role": "user", "content": prompt},
-        ],
-        stream=False
-    )
-    r = response.choices[0].message.content
-    print("AI返回：{}".format(r))
-    return r if r != "未知" else None
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant"},
+                {"role": "user", "content": prompt},
+            ],
+            stream=False
+        )
+        r = response.choices[0].message.content
+        print("AI返回：{}".format(r))
+        return r if r != "未知" else None
+    except Exception as e:
+        print(f"调用AI接口时出错: {e}")
+        return None
 
 
 # 处理歌手信息中包含&的清空进行清理，返回匹配的歌手和剩余文本
@@ -163,6 +174,11 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
     对音乐文件进行批量操作前，务必复制小部分音乐文件进行小范围测试！！！
     修改confiy.py中SRC_DIR和TARGET_DIR，运行main.py脚本进行音乐Tag清洗
     """
+    # 添加AI配置检查
+    if (is_get_genre or is_split_artist) and (not API_KEY or not BASE_URL or not MODEL):
+        print("启用音乐风格获取或艺术家拆分功能时，请确保在config.py中正确配置 API_KEY、BASE_URL 和 MODEL")
+        return -1
+
     print(f"开始清洗目录 {src_dir} ...")
     print("=" * 100)
     music_file_list = get_all_music_file(src_dir)
