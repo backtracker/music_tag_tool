@@ -6,6 +6,12 @@ SRC_DIR = r"音乐修复/待整理"
 # 目标目录
 TARGET_DIR = r'音乐修复/已整理'
 
+# # 源目录
+# SRC_DIR = r"/mnt/hdd3/音乐修复/待整理"
+#
+# # 目标目录
+# TARGET_DIR = r'/mnt/hdd3/音乐修复/已整理'
+
 
 # 设置简繁转换，如果不想转换，将IS_CC_CONVERT设置为False
 # OpenCC  conversion ： 'hk2s', 's2hk', 's2t', 's2tw', 's2twp', 't2hk', 't2s', 't2tw', 'tw2s', and 'tw2sp'
@@ -19,7 +25,7 @@ IS_GET_GENRE = False  # 是否获取音乐风格
 IS_SPLIT_ARTIST = False  # 是否拆分艺术家(feat或多艺术家)
 
 # 支持清洗的音乐类型
-SUPPORT_MUSIC_TYPE = ['.flac', '.dsf', '.mp3']
+SUPPORT_MUSIC_TYPE = ['.flac', '.dsf', '.mp3', '.m4a']
 
 # 创建目录中需要的专辑艺术家和专辑名，以及FLAC文件名，将不支持的字符替换为支持的字符
 CHAR_REPLACE_DICT = {'.': '_', ':': '：', '?': '？', '"': '“', '|': ' ', '*': '', '<': '', '>': '', '\\': '', '/': ''}
@@ -37,12 +43,19 @@ POP_KEY_LIST = {
              "releasestatus", "id", "comment", "encoder", "performer", 'discid', 'ctdbtrackconfidence',
              'cdtoc', "album artist", "notes", 'gnid', 'aaaa', 'ssss', 'ddddd', 'cccc', 'description'],
     "DSF": ['TSO2', 'TSOP', 'TSRC', 'TMED', 'COMM'],
-    "MP3": ['TSO2', 'TSOP', 'TSRC', 'TMED', 'COMM']
+    "MP3": ['TSO2', 'TSOP', 'TSRC', 'TMED', 'COMM'],
+    "M4A": ['\xa9cmt', '\xa9too', '\xa9wrt', 'cprt', 'desc', 'purd', '\xa9grp', 'keyw', 'ldes',
+            'sdes', '\xa9enc', 'cpil', 'tmpo', 'rtng', 'catg', 'stik', 'pcst', 'purl', 'egid', ]
 }
 
+# deepseek API地址
+BASE_URL = "https://api.deepseek.com"
+
 # deepseek API KEY
-# 申请地址：https://platform.deepseek.com/api_keys
 API_KEY = ""
+
+# AI模型
+MODEL = ""
 
 # 音乐风格的prompt
 MUSIC_GENRE_PROMPT = ("请说出音乐专辑的音乐风格（musicgenre），"
@@ -72,7 +85,7 @@ ARTISTS_WITH_AMPERSAND = ["伍佰 & China Blue", "Simon & Garfunkel", "南拳妈
                           "Ashford & Simpson", "Captain & Tennille", "Sonny & Cher", "Chad & Jeremy", "Peter & Gordon",
                           "Jan & Dean", "Marvin & Johnny", "Shaggy & Rayvon", "Milli & Vanilli", "Robynn & Kendy",
                           "小娟&山谷里的居民", "タッキー&翼", "Robbie Groove & Mattias",
-                          "Glen Hansard & Markéta Irglová", ]
+                          "Glen Hansard & Markéta Irglová", "Lady & Bird", "The Weeknd & Daft Punk"]
 
 # tag信息缺失文件列表
 lack_tag_file_list = []
