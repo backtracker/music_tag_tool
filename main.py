@@ -51,8 +51,8 @@ def call_ai(prompt) -> Optional[str]:
             stream=False
         )
         r = response.choices[0].message.content
-        print("AI返回：{}".format(r))
-        return r if r != "未知" else None
+        print("AI返回：{}".format(r.strip()))
+        return r.strip() if r != "未知" else None
     except Exception as e:
         print(f"调用AI接口时出错: {e}")
         return None
@@ -109,6 +109,26 @@ def clean_artists(text, target_artists):
     return matched_artists, cleaned_text  # 返回匹配列表和清理后的文本
 
 
+def process_feat(music_cleaner, prompt_template):
+    """
+    处理包含 feat 的情况，调用 AI 拆分艺术家，并更新音乐文件的艺术家信息
+    :param music_cleaner: 音乐文件清理器实例
+    :param prompt_template: AI 调用的提示模板
+    """
+    if "feat" in music_cleaner.title.lower() or "feat" in music_cleaner.artist.lower():
+        print("-" * 80)
+        # 标题或者艺术家中的feat文本
+        text = music_cleaner.title if "feat" in music_cleaner.title.lower() else music_cleaner.artist
+        print(f"开始处理歌曲 “{music_cleaner.title}” 艺术家信息 “{text}” 中的 feat 歌手...")
+        prompt = f"{prompt_template} {text}"
+        split_artists = call_ai(prompt)
+        if split_artists is not None:
+            # 确保包含专辑艺术家并去重
+            all_artists = f"{music_cleaner.album_artist}/{split_artists}"
+            new_artists = unique_artists(all_artists)
+            music_cleaner.artist = new_artists
+            print(f"歌曲 “{music_cleaner.title}” 艺术家设置为：{new_artists}")
+
 def get_all_music_file(dir) -> List[str]:
     """
     遍历SRC_DIR目录下全部flac文件，并返回文件列表
@@ -121,10 +141,9 @@ def get_all_music_file(dir) -> List[str]:
                 music_file_list.append(os.path.join(root, file))
     return music_file_list
 
-
 def delete_empty_dir(folder, is_keep_cover):
     """
-    获取目录下所有文件，删除后缀在DELETE_FILE_SUFFIX_LIST中的文件，然后删除空的目录
+    获取目录下所有文件,删除后缀在DELETE_FILE_SUFFIX_LIST中的文件,然后删除空的目录
     """
     # 查找目录下全部文件，得到一个列表
     # 待删除文件列表
@@ -154,7 +173,6 @@ def delete_empty_dir(folder, is_keep_cover):
         if len(os.listdir(dir)) == 0:
             print("删除空目录:{}".format(dir))
             os.rmdir(dir)
-
 
 @click.command()
 @click.option('-s', '--src_dir', default=SRC_DIR, help='源目录')
@@ -187,8 +205,10 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
         print("-" * 80)
         print("开始清洗文件: {}".format(music_file))
         music_cleaner = create_music_cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-        music_cleaner.clean_tags()  # 清洗tag
-
+        if music_cleaner is not None:
+            music_cleaner.clean_tags()  # 清洗tag
+        else:
+            print(f"不支持的文件类型: {music_file}")
     print("音乐文件tag预清洗完成。")
     print("=" * 100)
 
@@ -198,7 +218,8 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
     album_music_cleaner_dict = {}  # 根据专辑名称存放歌曲
     for music_file in full_tag_music_list:
         music_cleaner = create_music_cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
-        album_music_cleaner_dict.setdefault(music_cleaner.album, []).append(music_cleaner)
+        if music_cleaner is not None:
+            album_music_cleaner_dict.setdefault(music_cleaner.album, []).append(music_cleaner)
 
     print("-" * 80)
     # 开始处理碟号，如果专辑是单张碟，将整张专辑碟号字段清空
@@ -247,29 +268,23 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
                 music_cleaner: MusicCleaner
                 title: str = music_cleaner.title
                 artist: str = music_cleaner.artist
-                # 优先处理歌曲标题中的feat artist
-                if "feat" in title.lower():
+                # 处理feat artist
+                if "feat" in title.lower() or "feat" in  artist.lower():
+                    process_feat(music_cleaner,
+                                 TITLE_SPLIT_FEAT_PROMPT if "feat" in title.lower() else ARTIST_SPLIT_FEAT_PROMPT)
+                elif "合唱"  in title.lower():
                     print("-" * 80)
-                    print(f"开始处理歌曲 “{music_cleaner.title}” 中的feat歌手...")
-                    title_split_feat_prompt = f"{TITLE_SPLIT_FEAT_PROMPT} {music_cleaner.title}"
-                    split_artists = call_ai(title_split_feat_prompt)
+                    print(f"开始处理歌曲 “{title}” 标题中包含“合唱”的艺术家信息...")
+                    chorus_prompt = f"{ARTIST_SPLIT_CHORUS_PROMPT} {title}"
+                    split_artists = call_ai(chorus_prompt)
                     if split_artists is not None:
-                        # title 中feat 使用 专辑艺术家/feat艺术家
-                        new_artists = f"{music_cleaner.album_artist}/{split_artists}"
-                        new_artists = unique_artists(new_artists)  # 去重处理
+                        # 确保包含专辑艺术家并去重
+                        all_artists = f"{music_cleaner.album_artist}/{split_artists}"
+                        new_artists = unique_artists(all_artists)
                         music_cleaner.artist = new_artists
-                        print(f"歌曲 “{music_cleaner.title}” 艺术家设置为：{new_artists}")
-                        # continue  # feat只处理一次，优先处理歌曲名称中信息
-                elif "feat" in artist.lower():
-                    print("-" * 80)
-                    print(f"开始处理歌曲 “{music_cleaner.title}” 艺术家 “{music_cleaner.artist}” 中的 feat歌手...")
-                    artist_split_feat_prompt = f"{ARTIST_SPLIT_FEAT_PROMPT} {music_cleaner.artist}"
-                    split_artists = call_ai(artist_split_feat_prompt)
-                    if split_artists is not None:
-                        # 艺术家字段中不添加专辑艺术家
-                        new_artists = unique_artists(split_artists)  # 去重处理
-                        music_cleaner.artist = new_artists
-                        print(f"歌曲 {music_cleaner.title} 艺术家设置为：{new_artists}")
+                        print(f"歌曲 “{title}” 艺术家设置为：{new_artists}")
+                    else:
+                        print(f"未成功拆分歌曲 “{title}” 的艺术家信息。")
                 elif "&" in artist.lower():
                     print("-" * 80)
                     print(f"开始处理歌曲 “{music_cleaner.title}” 艺术家 “{music_cleaner.artist}” 中包含&的艺术家...")
@@ -277,6 +292,7 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
                                                                       target_artists=ARTISTS_WITH_AMPERSAND)
                     print(
                         f"“{music_cleaner.artist}” 清洗完成，匹配艺术家列表：{matched_artist_list}, 剩余文本：“{cleaned_text}”")
+                        
                     # 处理剩余文本中还包含&的情况，使用大模型处理
                     if "&" in cleaned_text:
                         print(f"开始处理预清洗完成后仍然包含&的情况，剩余文本：“{cleaned_text}”")
@@ -310,6 +326,9 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
     for music_file in full_tag_music_list:
         print("开始处理文件: {}".format(music_file))
         music_cleaner = create_music_cleaner(music_file, target_dir, is_cc_convert, is_delete_src, is_move_file)
+        if music_cleaner is None:
+            print("不支持的文件类型：{}".format(music_file))
+            continue
         new_file = music_cleaner.rename_file()
 
         if is_move_file and new_file is not None:

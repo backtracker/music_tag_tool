@@ -6,13 +6,6 @@ SRC_DIR = r"音乐修复/待整理"
 # 目标目录
 TARGET_DIR = r'音乐修复/已整理'
 
-# # 源目录
-# SRC_DIR = r"/mnt/hdd3/音乐修复/待整理"
-#
-# # 目标目录
-# TARGET_DIR = r'/mnt/hdd3/音乐修复/已整理'
-
-
 # 设置简繁转换，如果不想转换，将IS_CC_CONVERT设置为False
 # OpenCC  conversion ： 'hk2s', 's2hk', 's2t', 's2tw', 's2twp', 't2hk', 't2s', 't2tw', 'tw2s', and 'tw2sp'
 cc = OpenCC('t2s')
@@ -78,6 +71,10 @@ ARTIST_SPLIT_FEAT_PROMPT = ("请将音乐艺术家信息中包含feat的情况�
 ARTIST_SPLIT_AMPERSAND_PROMPT = ("请将音乐艺术家信息中包含&符号的情况拆分出单独的艺术家信息。多个艺术家之间用英文斜杠/分隔"
                                  "请注意区分艺术家名称本来就包含&的情况，例如 伍佰 & China Blue"
                                  "直接给出艺术家信息，不要赘述。如果没有匹配请说未知。请清空多余的空格。下面给出艺术家信息:")
+
+# 处理艺术家中的 合唱
+ARTIST_SPLIT_CHORUS_PROMPT = ('请将音乐名称信息中包含"合唱"的情况拆分出单独的艺术家信息。'
+                            '多个艺术家之间用英文斜杠/分隔直接给出艺术家信息，不要赘述。如果没有匹配请说未知。下面给出艺术家信息:')
 
 # 包含&的艺术家列表
 ARTISTS_WITH_AMPERSAND = ["伍佰 & China Blue", "Simon & Garfunkel", "南拳妈妈 & Lara", "Hall & Oates", "Brooks & Dunn",
