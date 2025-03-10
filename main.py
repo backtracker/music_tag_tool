@@ -109,17 +109,16 @@ def clean_artists(text, target_artists):
     return matched_artists, cleaned_text  # 返回匹配列表和清理后的文本
 
 
-def process_feat(music_cleaner, prompt_template):
+def process_feat(music_cleaner, prompt_template, text):
     """
     处理包含 feat 的情况，调用 AI 拆分艺术家，并更新音乐文件的艺术家信息
     :param music_cleaner: 音乐文件清理器实例
     :param prompt_template: AI 调用的提示模板
+    :param text: 标题或者艺术家中的feat文本
     """
     if "feat" in music_cleaner.title.lower() or "feat" in music_cleaner.artist.lower():
         print("-" * 80)
-        # 标题或者艺术家中的feat文本
-        text = music_cleaner.title if "feat" in music_cleaner.title.lower() else music_cleaner.artist
-        print(f"开始处理歌曲 “{music_cleaner.title}” 艺术家信息 “{text}” 中的 feat 歌手...")
+        print(f"开始处理歌曲 “{music_cleaner.title}” 名称/艺术家信息 “{text}” 中的 feat 歌手...")
         prompt = f"{prompt_template} {text}"
         split_artists = call_ai(prompt)
         if split_artists is not None:
@@ -271,7 +270,8 @@ def run(src_dir, target_dir, is_cc_convert, is_delete_src, is_move_file, is_keep
                 # 处理feat artist
                 if "feat" in title.lower() or "feat" in  artist.lower():
                     process_feat(music_cleaner,
-                                 TITLE_SPLIT_FEAT_PROMPT if "feat" in title.lower() else ARTIST_SPLIT_FEAT_PROMPT)
+                                 TITLE_SPLIT_FEAT_PROMPT if "feat" in title.lower() else ARTIST_SPLIT_FEAT_PROMPT,
+                                 music_cleaner.title if "feat" in title.lower() else artist)
                 elif "合唱"  in title.lower():
                     print("-" * 80)
                     print(f"开始处理歌曲 “{title}” 标题中包含“合唱”的艺术家信息...")
